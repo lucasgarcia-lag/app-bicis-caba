@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Bici - Talleres, Bicicleterías y más en CABA</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  header {
+    background: #1a1a2e;
+    color: white;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  header h1 { font-size: 18px; font-weight: 600; }
+
+  #filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-btn {
+    background: #2d2d4d;
+    color: #ccc;
+    border: 1px solid #444;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-btn:hover { background: #3d3d6d; }
+  .filter-btn.active { background: #4CAF50; color: white; border-color: #4CAF50; }
+
+  #sunday-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  #map { flex: 1; width: 100%; }
+
+  #status {
+    padding: 6px 20px;
+    background: #f5f5f5;
+    color: #666;
+    font-size: 12px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .info-window { font-family: inherit; max-width: 240px; }
+  .info-window h3 { font-size: 15px; margin-bottom: 6px; color: #1a1a2e; }
+  .info-window p { font-size: 13px; margin: 3px 0; color: #444; }
+  .info-window .tag {
+    display: inline-block;
+    background: #4CAF50;
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+  .info-window a { color: #2196F3; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <h1>🚲 La Bici — CABA</h1>
+    <div id="filters">
+      <button class="filter-btn active" data-cat="todas">Todas</button>
+      <button class="filter-btn" data-cat="Taller">Talleres</button>
+      <button class="filter-btn" data-cat="Bicicletería">Bicicleterías</button>
+      <button class="filter-btn" data-cat="Alquiler">Alquiler</button>
+      <button class="filter-btn" data-cat="Indumentaria">Indumentaria</button>
+      <button class="filter-btn" data-cat="Repuestos y accesorios">Repuestos</button>
+      <label id="sunday-toggle">
+        <input type="checkbox" id="sundayCheck"> Abre domingo
+      </label>
+    </div>
+  </header>
+  <div id="status">Cargando locales...</div>
+  <div id="map"></div>
+</div>
+
+<!-- SDK de Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  // ---- CONFIGURACIÓN ----
+  const SUPABASE_URL = "https://hcgnlejfyhyrxumusjri.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjZ25sZWpmeWh5cnh1bXVzanJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MDA1MjcsImV4cCI6MjEwMzA3NjUyN30.m4axSVDjobVdbE5clPBSgslo4l0yEjOR64O-guSuZ04";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let map;
+  let markers = [];
+  let allLocales = [];
+  let activeCategory = "todas";
+  let onlySunday = false;
+
+  // ---- INICIALIZAR MAPA ----
+  function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: { lat: -34.6037, lng: -58.4206 }, // Centro de CABA (Obelisco)
+      zoom: 12,
+      mapId: "DEMO_MAP_ID"
+    });
+    cargarLocales();
+  }
+
+  // ---- CARGAR DATOS DE SUPABASE ----
+  async function cargarLocales() {
+    const status = document.getElementById("status");
+    const { data, error } = await supabaseClient
+      .from("locales")
+      .select("*");
+
+    if (error) {
+      status.textContent = "❌ Error cargando datos: " + error.message;
+      console.error(error);
+      return;
+    }
+
+    allLocales = data;
+    status.textContent = `✅ ${data.length} locales cargados`;
+    renderMarkers();
+  }
+
+  // ---- RENDERIZAR PINES SEGÚN FILTROS ----
+  function renderMarkers() {
+    // Limpiar pines existentes
+    markers.forEach(m => m.setMap(null));
+    markers = [];
+
+    const filtrados = allLocales.filter(local => {
+      const pasaCategoria = activeCategory === "todas" || local.categoria === activeCategory;
+      const pasaDomingo = !onlySunday || local.abre_domingo === true;
+      return pasaCategoria && pasaDomingo;
+    });
+
+    filtrados.forEach(local => {
+      if (!local.lat || !local.long) return;
+
+      const marker = new google.maps.Marker({
+        position: { lat: parseFloat(local.lat), lng: parseFloat(local.long) },
+        map: map,
+        title: local.nombre,
+        icon: iconoPorCategoria(local.categoria)
+      });
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: armarInfoWindow(local)
+      });
+
+      marker.addListener("click", () => {
+        infoWindow.open(map, marker);
+      });
+
+      markers.push(marker);
+    });
+
+    document.getElementById("status").textContent = `Mostrando ${filtrados.length} de ${allLocales.length} locales`;
+  }
+
+  function iconoPorCategoria(cat) {
+    const colores = {
+      "Taller": "red",
+      "Bicicletería": "blue",
+      "Alquiler": "green",
+      "Indumentaria": "purple",
+      "Repuestos y accesorios": "orange"
+    };
+    const color = colores[cat] || "gray";
+    return `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
+  }
+
+  function armarInfoWindow(local) {
+    const domingo = local.abre_domingo ? "✅ Abre domingos" : "❌ No abre domingos";
+    const insta = local.instagram ? `<p><a href="https://instagram.com/${local.instagram.replace('@','')}" target="_blank">${local.instagram}</a></p>` : "";
+    const tel = local.telefono_whatsapp ? `<p>📱 <a href="https://wa.me/54${local.telefono_whatsapp}" target="_blank">${local.telefono_whatsapp}</a></p>` : "";
+
+    return `
+      <div class="info-window">
+        <span class="tag">${local.categoria}</span>
+        <h3>${local.nombre}</h3>
+        <p>📍 ${local.direccion || ""}</p>
+        <p>🕒 ${local.horario || "Horario no disponible"}</p>
+        <p>${domingo}</p>
+        ${tel}
+        ${insta}
+        ${local.notas ? `<p style="margin-top:6px;font-style:italic;">${local.notas}</p>` : ""}
+      </div>
+    `;
+  }
+
+  // ---- EVENTOS DE FILTROS ----
+  document.querySelectorAll(".filter-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeCategory = btn.dataset.cat;
+      renderMarkers();
+    });
+  });
+
+  document.getElementById("sundayCheck").addEventListener("change", (e) => {
+    onlySunday = e.target.checked;
+    renderMarkers();
+  });
+</script>
+
+<!-- SDK de Google Maps: reemplazá TU_API_KEY por tu key real -->
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALr-xcC7FDaPrPuNlQiChxEQACiWi0fD8&callback=initMap">
+</script>
+
+</body>
+</html>
