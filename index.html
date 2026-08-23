@@ -62,9 +62,10 @@
     border-bottom: 1px solid #ddd;
   }
 
-  .info-window { font-family: inherit; max-width: 240px; }
+  .info-window { font-family: inherit; max-width: 250px; }
   .info-window h3 { font-size: 15px; margin-bottom: 6px; color: #1a1a2e; }
   .info-window p { font-size: 13px; margin: 3px 0; color: #444; }
+  .info-window .tags { margin-bottom: 6px; }
   .info-window .tag {
     display: inline-block;
     background: #4CAF50;
@@ -72,7 +73,8 @@
     font-size: 11px;
     padding: 2px 8px;
     border-radius: 10px;
-    margin-bottom: 6px;
+    margin-right: 4px;
+    margin-bottom: 4px;
   }
   .info-window a { color: #2196F3; text-decoration: none; }
 </style>
@@ -119,17 +121,23 @@
     map = new google.maps.Map(document.getElementById("map"), {
       center: { lat: -34.6037, lng: -58.4206 }, // Centro de CABA (Obelisco)
       zoom: 12,
-      mapId: "DEMO_MAP_ID"
     });
     cargarLocales();
   }
 
-  // ---- CARGAR DATOS DE SUPABASE ----
+  // ---- CARGAR DATOS DE SUPABASE (con categorías relacionadas) ----
   async function cargarLocales() {
     const status = document.getElementById("status");
+
+    // El join trae, por cada local, la lista de categorías vinculadas vía locales_categorias
     const { data, error } = await supabaseClient
       .from("locales")
-      .select("*");
+      .select(`
+        *,
+        locales_categorias (
+          categorias ( nombre )
+        )
+      `);
 
     if (error) {
       status.textContent = "❌ Error cargando datos: " + error.message;
@@ -137,19 +145,23 @@
       return;
     }
 
-    allLocales = data;
-    status.textContent = `✅ ${data.length} locales cargados`;
+    // Aplanamos la estructura: cada local tiene un array simple de nombres de categoría
+    allLocales = data.map(local => ({
+      ...local,
+      categorias: (local.locales_categorias || []).map(lc => lc.categorias.nombre)
+    }));
+
+    status.textContent = `✅ ${allLocales.length} locales cargados`;
     renderMarkers();
   }
 
   // ---- RENDERIZAR PINES SEGÚN FILTROS ----
   function renderMarkers() {
-    // Limpiar pines existentes
     markers.forEach(m => m.setMap(null));
     markers = [];
 
     const filtrados = allLocales.filter(local => {
-      const pasaCategoria = activeCategory === "todas" || local.categoria === activeCategory;
+      const pasaCategoria = activeCategory === "todas" || local.categorias.includes(activeCategory);
       const pasaDomingo = !onlySunday || local.abre_domingo === true;
       return pasaCategoria && pasaDomingo;
     });
@@ -161,7 +173,7 @@
         position: { lat: parseFloat(local.lat), lng: parseFloat(local.long) },
         map: map,
         title: local.nombre,
-        icon: iconoPorCategoria(local.categoria)
+        icon: iconoPorCategorias(local.categorias)
       });
 
       const infoWindow = new google.maps.InfoWindow({
@@ -178,7 +190,7 @@
     document.getElementById("status").textContent = `Mostrando ${filtrados.length} de ${allLocales.length} locales`;
   }
 
-  function iconoPorCategoria(cat) {
+  function iconoPorCategorias(categorias) {
     const colores = {
       "Taller": "red",
       "Bicicletería": "blue",
@@ -186,23 +198,31 @@
       "Indumentaria": "purple",
       "Repuestos y accesorios": "orange"
     };
-    const color = colores[cat] || "gray";
+    // Si tiene varias categorías, usamos el color de la primera como color principal del pin
+    const principal = categorias && categorias.length > 0 ? categorias[0] : null;
+    const color = colores[principal] || "gray";
     return `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
   }
 
   function armarInfoWindow(local) {
     const domingo = local.abre_domingo ? "✅ Abre domingos" : "❌ No abre domingos";
     const insta = local.instagram ? `<p><a href="https://instagram.com/${local.instagram.replace('@','')}" target="_blank">${local.instagram}</a></p>` : "";
-    const tel = local.telefono_whatsapp ? `<p>📱 <a href="https://wa.me/54${local.telefono_whatsapp}" target="_blank">${local.telefono_whatsapp}</a></p>` : "";
+    const whatsapp = local.telefono_whatsapp ? `<p>📱 WhatsApp: <a href="https://wa.me/54${local.telefono_whatsapp}" target="_blank">${local.telefono_whatsapp}</a></p>` : "";
+    const fijo = local.telefono_fijo ? `<p>☎️ Tel. fijo: ${local.telefono_fijo}</p>` : "";
+
+    const tags = (local.categorias || [])
+      .map(cat => `<span class="tag">${cat}</span>`)
+      .join("");
 
     return `
       <div class="info-window">
-        <span class="tag">${local.categoria}</span>
+        <div class="tags">${tags}</div>
         <h3>${local.nombre}</h3>
         <p>📍 ${local.direccion || ""}</p>
         <p>🕒 ${local.horario || "Horario no disponible"}</p>
         <p>${domingo}</p>
-        ${tel}
+        ${whatsapp}
+        ${fijo}
         ${insta}
         ${local.notas ? `<p style="margin-top:6px;font-style:italic;">${local.notas}</p>` : ""}
       </div>
@@ -225,7 +245,7 @@
   });
 </script>
 
-<!-- SDK de Google Maps: reemplazá TU_API_KEY por tu key real -->
+<!-- SDK de Google Maps -->
 <script async
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALr-xcC7FDaPrPuNlQiChxEQACiWi0fD8&callback=initMap">
 </script>
