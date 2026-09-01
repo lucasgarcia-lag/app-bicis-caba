@@ -150,6 +150,45 @@
     white-space: nowrap;
   }
 
+  #toggle-bicisendas {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(23, 26, 26, 0.92);
+    color: var(--blanco-linea);
+    border: 1.5px solid transparent;
+    border-radius: 20px;
+    padding: 7px 12px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #toggle-bicisendas .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; opacity: 0.4; }
+  #toggle-bicisendas.on { border-color: #2ECC71; }
+  #toggle-bicisendas.on .dot { opacity: 1; }
+
+  .btn-ir {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--verde-ciclovia);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-ir:active { background: #0a6b3a; }
+
   /* ---------- BOTTOM SHEET ---------- */
   #sheet {
     position: absolute;
@@ -307,6 +346,9 @@
 
   <div id="map-container">
     <div id="status-pill">Cargando locales…</div>
+    <button id="toggle-bicisendas" type="button">
+      <span class="dot" style="background:#2ECC71;"></span>Bicisendas
+    </button>
     <div id="map"></div>
   </div>
 
@@ -346,6 +388,29 @@
   // Mapa estándar de Google (sin estilo custom) — prioriza legibilidad de calles
   const MAP_STYLE = [];
 
+  // ---------- IR EN BICI (usa el GPS del usuario) ----------
+  window.abrirRuta = function (lat, lng) {
+    const destino = `${lat},${lng}`;
+
+    function abrirConOrigen(origen) {
+      const base = "https://www.google.com/maps/dir/?api=1";
+      const url = origen
+        ? `${base}&origin=${origen}&destination=${destino}&travelmode=bicycling`
+        : `${base}&destination=${destino}&travelmode=bicycling`;
+      window.open(url, "_blank");
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => abrirConOrigen(`${pos.coords.latitude},${pos.coords.longitude}`),
+        () => abrirConOrigen(null), // si no da permiso, Google Maps usa la ubicación del dispositivo igual
+        { timeout: 6000 }
+      );
+    } else {
+      abrirConOrigen(null);
+    }
+  };
+
   let map;
   let markers = [];
   let allLocales = [];
@@ -364,9 +429,17 @@
     cargarLocales();
     setupSheetDrag();
 
-    // Capa nativa de Google con bicisendas y ciclovías resaltadas
+    // Capa nativa de Google con bicisendas y ciclovías — apagada por defecto,
+    // el usuario la prende con el botón flotante si la quiere ver
     const bikeLayer = new google.maps.BicyclingLayer();
-    bikeLayer.setMap(map);
+    const toggleBtn = document.getElementById("toggle-bicisendas");
+    let bicisendasOn = false;
+
+    toggleBtn.addEventListener("click", () => {
+      bicisendasOn = !bicisendasOn;
+      bikeLayer.setMap(bicisendasOn ? map : null);
+      toggleBtn.classList.toggle("on", bicisendasOn);
+    });
   }
 
   async function cargarLocales() {
@@ -412,8 +485,9 @@
 
   function pinSvg(color) {
     const svg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34">
-        <circle cx="17" cy="17" r="10" fill="${color}" stroke="#171A1A" stroke-width="2.5"/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36">
+        <circle cx="18" cy="18" r="10.5" fill="${color}" stroke="#FFFFFF" stroke-width="3.5"/>
+        <circle cx="18" cy="18" r="10.5" fill="none" stroke="#171A1A" stroke-width="1"/>
       </svg>`;
     return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
   }
@@ -471,6 +545,7 @@
         ${fijo}
         ${insta}
         ${local.notas ? `<p style="margin-top:6px;font-style:italic;">${local.notas}</p>` : ""}
+        ${local.lat && local.long ? `<button class="btn-ir" onclick="window.abrirRuta(${local.lat}, ${local.long})">🚴 Ir en bici</button>` : ""}
       </div>
     `;
   }
@@ -492,6 +567,7 @@
           ${local.abre_domingo
             ? '<span class="badge-domingo si">✓ Abre domingos</span>'
             : '<span class="badge-domingo no">✕ No abre domingos</span>'}
+          ${local.lat && local.long ? `<div><button class="btn-ir" onclick="event.stopPropagation(); window.abrirRuta(${local.lat}, ${local.long})">🚴 Ir en bici</button></div>` : ""}
         </div>
       `;
       card.addEventListener("click", () => {
