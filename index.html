@@ -296,12 +296,12 @@
     </div>
     <div id="chips">
       <button class="chip active" data-cat="todas" style="--chip-color: var(--blanco-linea); --chip-text: var(--asfalto);">Todas</button>
+      <button class="chip" id="chip-domingo" data-domingo="1" style="--chip-color: var(--amarillo-alta-vis); --chip-text: var(--asfalto);"><span class="dot" style="background: var(--amarillo-alta-vis);"></span>Abre domingo</button>
       <button class="chip" data-cat="Taller" style="--chip-color: var(--cat-taller); --chip-text: white;"><span class="dot" style="background: var(--cat-taller);"></span>Talleres</button>
       <button class="chip" data-cat="Bicicletería" style="--chip-color: var(--cat-bicicleteria); --chip-text: var(--asfalto);"><span class="dot" style="background: var(--cat-bicicleteria);"></span>Bicicleterías</button>
       <button class="chip" data-cat="Alquiler" style="--chip-color: var(--cat-alquiler); --chip-text: white;"><span class="dot" style="background: var(--cat-alquiler);"></span>Alquiler</button>
       <button class="chip" data-cat="Indumentaria" style="--chip-color: var(--cat-indumentaria); --chip-text: white;"><span class="dot" style="background: var(--cat-indumentaria);"></span>Indumentaria</button>
       <button class="chip" data-cat="Repuestos y accesorios" style="--chip-color: var(--cat-repuestos); --chip-text: white;"><span class="dot" style="background: var(--cat-repuestos);"></span>Repuestos</button>
-      <button class="chip" id="chip-domingo" data-domingo="1" style="--chip-color: var(--amarillo-alta-vis); --chip-text: var(--asfalto);"><span class="dot" style="background: var(--amarillo-alta-vis);"></span>Abre domingo</button>
     </div>
   </header>
 
@@ -363,6 +363,10 @@
     });
     cargarLocales();
     setupSheetDrag();
+
+    // Capa nativa de Google con bicisendas y ciclovías resaltadas
+    const bikeLayer = new google.maps.BicyclingLayer();
+    bikeLayer.setMap(map);
   }
 
   async function cargarLocales() {
@@ -530,6 +534,7 @@
     let startY = 0;
     let startTranslate = 0;
     let dragging = false;
+    let history = []; // últimas posiciones {t, y} para calcular velocidad del gesto
 
     function getCurrentTranslateY() {
       const rect = sheet.getBoundingClientRect();
@@ -544,6 +549,7 @@
       dragging = true;
       startY = e.clientY;
       startTranslate = getCurrentTranslateY();
+      history = [{ t: performance.now(), y: e.clientY }];
       sheet.classList.add("dragging");
       handleArea.setPointerCapture(e.pointerId);
     });
@@ -553,9 +559,10 @@
       const deltaY = e.clientY - startY;
       const containerHeight = sheet.parentElement.getBoundingClientRect().height;
       const newTop = Math.max(containerHeight * 0.15, Math.min(containerHeight - 96, startTranslate + deltaY));
-      const translateFromBottom = containerHeight - newTop;
-      sheet.style.transform = `translateY(${containerHeight - translateFromBottom}px)`;
       sheet.style.transform = `translateY(${newTop - (containerHeight - sheet.offsetHeight)}px)`;
+
+      history.push({ t: performance.now(), y: e.clientY });
+      if (history.length > 6) history.shift();
     });
 
     handleArea.addEventListener("pointerup", (e) => {
@@ -564,6 +571,27 @@
       sheet.classList.remove("dragging");
       sheet.style.transform = "";
 
+      // Velocidad del gesto: comparamos el primer y último punto guardados
+      let velocity = 0;
+      if (history.length >= 2) {
+        const first = history[0];
+        const last = history[history.length - 1];
+        const dt = last.t - first.t;
+        if (dt > 0) velocity = (last.y - first.y) / dt; // px por ms, positivo = hacia abajo
+      }
+
+      const FLICK_THRESHOLD = 0.5; // px/ms — un gesto corto y rápido ya alcanza
+
+      if (velocity > FLICK_THRESHOLD) {
+        collapseSheet();
+        return;
+      }
+      if (velocity < -FLICK_THRESHOLD) {
+        expandSheet();
+        return;
+      }
+
+      // Si no fue un flick claro, usamos la posición final como antes
       const rect = sheet.getBoundingClientRect();
       const containerRect = sheet.parentElement.getBoundingClientRect();
       const visibleRatio = (containerRect.bottom - rect.top) / rect.height;
