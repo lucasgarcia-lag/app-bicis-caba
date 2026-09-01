@@ -344,19 +344,24 @@
 
   // Estilo de mapa tono "asfalto" para que combine con el resto de la app
   const MAP_STYLE = [
-    { elementType: "geometry", stylers: [{ color: "#1c1f1e" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#171a1a" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#8a8f87" }] },
+    { elementType: "geometry", stylers: [{ color: "#121412" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#121412" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#9aa09a" }] },
     { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#3a3d3c" }] },
+    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#c3c8c1" }] },
     { featureType: "poi", stylers: [{ visibility: "off" }] },
-    { featureType: "road", elementType: "geometry", stylers: [{ color: "#2c2f2e" }] },
-    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8f87" }] },
-    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3a3d3c" }] },
-    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#2c2f2e" }] },
+    { featureType: "road", elementType: "geometry.fill", stylers: [{ color: "#545853" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#121412" }] },
+    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#b8bcb5" }] },
+    { featureType: "road.local", elementType: "geometry.fill", stylers: [{ color: "#454944" }] },
+    { featureType: "road.arterial", elementType: "geometry.fill", stylers: [{ color: "#5c605a" }] },
+    { featureType: "road.highway", elementType: "geometry.fill", stylers: [{ color: "#7c8177" }] },
+    { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#121412" }] },
+    { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#e2e5df" }] },
     { featureType: "transit", stylers: [{ visibility: "off" }] },
-    { featureType: "water", elementType: "geometry", stylers: [{ color: "#123329" }] },
-    { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#1c1f1e" }] },
-    { featureType: "park", elementType: "geometry", stylers: [{ color: "#16261d" }] }
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0d2a21" }] },
+    { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#121412" }] },
+    { featureType: "park", elementType: "geometry", stylers: [{ color: "#122019" }] }
   ];
 
   let map;
