@@ -2,113 +2,362 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>La Bici - Talleres, Bicicleterías y más en CABA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>La Bici — Talleres, Bicicleterías y más en CABA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  :root {
+    --asfalto: #171A1A;
+    --verde-ciclovia: #0E8C4D;
+    --amarillo-alta-vis: #D6FF3F;
+    --blanco-linea: #F5F2EA;
+    --oxido: #C1440E;
+    --gris-cemento: #8A8F87;
+    --cielo-porteno: #3E7CB1;
 
-  #app { display: flex; flex-direction: column; height: 100vh; }
+    /* colores por categoría, como las líneas de subte: cada una con su color propio */
+    --cat-taller: var(--verde-ciclovia);
+    --cat-bicicleteria: var(--amarillo-alta-vis);
+    --cat-alquiler: var(--cielo-porteno);
+    --cat-indumentaria: var(--oxido);
+    --cat-repuestos: #5B5F58;
 
+    --font-display: 'Oswald', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    font-family: var(--font-body);
+    background: var(--asfalto);
+    overscroll-behavior: none;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ---------- HEADER ---------- */
   header {
-    background: #1a1a2e;
-    color: white;
-    padding: 14px 20px;
+    background: var(--asfalto);
+    color: var(--blanco-linea);
+    padding: 14px 18px 12px;
+    z-index: 30;
+    flex-shrink: 0;
+  }
+
+  .logo-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
+    gap: 9px;
+    margin-bottom: 12px;
   }
-  header h1 { font-size: 18px; font-weight: 600; }
 
-  #filters {
+  .logo-mark {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+
+  .logo-row h1 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.2px;
+  }
+
+  .logo-row .ciudad {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--gris-cemento);
+    margin-left: 2px;
+    padding-top: 3px;
+  }
+
+  /* ---------- CHIPS DE FILTRO ---------- */
+  #chips {
     display: flex;
     gap: 8px;
-    flex-wrap: wrap;
-    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
   }
+  #chips::-webkit-scrollbar { display: none; }
 
-  .filter-btn {
-    background: #2d2d4d;
-    color: #ccc;
-    border: 1px solid #444;
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-  .filter-btn:hover { background: #3d3d6d; }
-  .filter-btn.active { background: #4CAF50; color: white; border-color: #4CAF50; }
-
-  #sunday-toggle {
+  .chip {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 6px;
-    color: white;
+    background: transparent;
+    border: 1.5px solid #3A3D3C;
+    color: var(--blanco-linea);
+    border-radius: 20px;
+    padding: 7px 14px;
+    font-family: var(--font-body);
+    font-weight: 600;
     font-size: 13px;
     cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
 
-  #map { flex: 1; width: 100%; }
+  .chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
 
-  #status {
-    padding: 6px 20px;
-    background: #f5f5f5;
-    color: #666;
+  .chip.active {
+    background: var(--chip-color, var(--verde-ciclovia));
+    border-color: var(--chip-color, var(--verde-ciclovia));
+    color: var(--chip-text, var(--asfalto));
+  }
+  .chip.active .dot { display: none; }
+
+  /* ---------- MAPA ---------- */
+  #map-container {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+  }
+  #map { width: 100%; height: 100%; }
+
+  #status-pill {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(23, 26, 26, 0.92);
+    color: var(--blanco-linea);
+    font-family: var(--font-body);
     font-size: 12px;
-    border-bottom: 1px solid #ddd;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 20px;
+    z-index: 10;
+    white-space: nowrap;
   }
 
-  .info-window { font-family: inherit; max-width: 250px; }
-  .info-window h3 { font-size: 15px; margin-bottom: 6px; color: #1a1a2e; }
-  .info-window p { font-size: 13px; margin: 3px 0; color: #444; }
-  .info-window .tags { margin-bottom: 6px; }
-  .info-window .tag {
-    display: inline-block;
-    background: #4CAF50;
-    color: white;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-right: 4px;
+  /* ---------- BOTTOM SHEET ---------- */
+  #sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--blanco-linea);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.25);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    height: 85vh;
+    height: 85dvh;
+    transform: translateY(calc(100% - 96px));
+    transition: transform 0.25s cubic-bezier(.2,.8,.3,1);
+    touch-action: none;
+  }
+  #sheet.expanded { transform: translateY(0); }
+  #sheet.dragging { transition: none; }
+
+  #sheet-handle-area {
+    flex-shrink: 0;
+    padding: 10px 18px 6px;
+    cursor: grab;
+  }
+
+  .handle-bar {
+    width: 40px;
+    height: 4px;
+    background: #D8D4C8;
+    border-radius: 3px;
+    margin: 0 auto 12px;
+  }
+
+  #sheet-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--asfalto);
+  }
+  #sheet-title span { color: var(--gris-cemento); font-family: var(--font-body); font-weight: 500; }
+
+  #sheet-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 14px 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .local-card {
+    display: flex;
+    gap: 12px;
+    padding: 13px 8px;
+    border-bottom: 1px solid #E8E4D8;
+    cursor: pointer;
+  }
+  .local-card:active { background: #EFEBDD; }
+  .local-card:last-child { border-bottom: none; }
+
+  .local-card .marca {
+    width: 5px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  .local-card .info { flex: 1; min-width: 0; }
+
+  .local-card h3 {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--asfalto);
     margin-bottom: 4px;
   }
-  .info-window a { color: #2196F3; text-decoration: none; }
+
+  .cat-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 5px;
+  }
+  .cat-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .local-card .direccion {
+    font-size: 12.5px;
+    color: var(--gris-cemento);
+    margin-bottom: 3px;
+  }
+
+  .badge-domingo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 0;
+  }
+  .badge-domingo.si { color: var(--verde-ciclovia); }
+  .badge-domingo.no { color: var(--oxido); }
+
+  /* ---------- INFO WINDOW (Google) ---------- */
+  .iw {
+    font-family: var(--font-body);
+    max-width: 230px;
+  }
+  .iw h3 {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--asfalto);
+    margin-bottom: 6px;
+  }
+  .iw .cat-tags { margin-bottom: 6px; }
+  .iw p { font-size: 13px; margin: 3px 0; color: #333; }
+  .iw a { color: var(--cielo-porteno); text-decoration: none; font-weight: 600; }
+
+  @media (min-width: 720px) {
+    #sheet { width: 380px; left: 16px; right: auto; bottom: 16px; border-radius: 16px; height: 70vh; }
+    #sheet:not(.expanded) { transform: translateY(calc(100% - 110px)); }
+  }
 </style>
 </head>
 <body>
 
 <div id="app">
   <header>
-    <h1>🚲 La Bici — CABA</h1>
-    <div id="filters">
-      <button class="filter-btn active" data-cat="todas">Todas</button>
-      <button class="filter-btn" data-cat="Taller">Talleres</button>
-      <button class="filter-btn" data-cat="Bicicletería">Bicicleterías</button>
-      <button class="filter-btn" data-cat="Alquiler">Alquiler</button>
-      <button class="filter-btn" data-cat="Indumentaria">Indumentaria</button>
-      <button class="filter-btn" data-cat="Repuestos y accesorios">Repuestos</button>
-      <label id="sunday-toggle">
-        <input type="checkbox" id="sundayCheck"> Abre domingo
-      </label>
+    <div class="logo-row">
+      <svg class="logo-mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="34" r="8" stroke="var(--amarillo-alta-vis)" stroke-width="3.2"/>
+        <circle cx="36" cy="34" r="8" stroke="var(--amarillo-alta-vis)" stroke-width="3.2"/>
+        <path d="M12 34 L22 16 H30 M22 16 L30 34 M22 16 L16 26 H30 L36 34" stroke="var(--verde-ciclovia)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="30" cy="12" r="3.4" fill="var(--amarillo-alta-vis)"/>
+      </svg>
+      <h1>La Bici</h1>
+      <span class="ciudad">CABA</span>
+    </div>
+    <div id="chips">
+      <button class="chip active" data-cat="todas" style="--chip-color: var(--blanco-linea); --chip-text: var(--asfalto);">Todas</button>
+      <button class="chip" data-cat="Taller" style="--chip-color: var(--cat-taller); --chip-text: white;"><span class="dot" style="background: var(--cat-taller);"></span>Talleres</button>
+      <button class="chip" data-cat="Bicicletería" style="--chip-color: var(--cat-bicicleteria); --chip-text: var(--asfalto);"><span class="dot" style="background: var(--cat-bicicleteria);"></span>Bicicleterías</button>
+      <button class="chip" data-cat="Alquiler" style="--chip-color: var(--cat-alquiler); --chip-text: white;"><span class="dot" style="background: var(--cat-alquiler);"></span>Alquiler</button>
+      <button class="chip" data-cat="Indumentaria" style="--chip-color: var(--cat-indumentaria); --chip-text: white;"><span class="dot" style="background: var(--cat-indumentaria);"></span>Indumentaria</button>
+      <button class="chip" data-cat="Repuestos y accesorios" style="--chip-color: var(--cat-repuestos); --chip-text: white;"><span class="dot" style="background: var(--cat-repuestos);"></span>Repuestos</button>
+      <button class="chip" id="chip-domingo" data-domingo="1" style="--chip-color: var(--amarillo-alta-vis); --chip-text: var(--asfalto);"><span class="dot" style="background: var(--amarillo-alta-vis);"></span>Abre domingo</button>
     </div>
   </header>
-  <div id="status">Cargando locales...</div>
-  <div id="map"></div>
+
+  <div id="map-container">
+    <div id="status-pill">Cargando locales…</div>
+    <div id="map"></div>
+  </div>
+
+  <div id="sheet">
+    <div id="sheet-handle-area">
+      <div class="handle-bar"></div>
+      <div id="sheet-title">Locales <span id="sheet-count"></span></div>
+    </div>
+    <div id="sheet-list"></div>
+  </div>
 </div>
 
-<!-- SDK de Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-  // ---- CONFIGURACIÓN ----
+  // ---------- CONFIGURACIÓN ----------
   const SUPABASE_URL = "https://hcgnlejfyhyrxumusjri.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjZ25sZWpmeWh5cnh1bXVzanJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MDA1MjcsImV4cCI6MjEwMzA3NjUyN30.m4axSVDjobVdbE5clPBSgslo4l0yEjOR64O-guSuZ04";
-
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const CATEGORY_COLORS = {
+    "Taller": "#0E8C4D",
+    "Bicicletería": "#D6FF3F",
+    "Alquiler": "#3E7CB1",
+    "Indumentaria": "#C1440E",
+    "Repuestos y accesorios": "#5B5F58"
+  };
+  const CATEGORY_TEXT = {
+    "Taller": "#FFFFFF",
+    "Bicicletería": "#171A1A",
+    "Alquiler": "#FFFFFF",
+    "Indumentaria": "#FFFFFF",
+    "Repuestos y accesorios": "#FFFFFF"
+  };
+
+  // Estilo de mapa tono "asfalto" para que combine con el resto de la app
+  const MAP_STYLE = [
+    { elementType: "geometry", stylers: [{ color: "#1c1f1e" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#171a1a" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#8a8f87" }] },
+    { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#3a3d3c" }] },
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#2c2f2e" }] },
+    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8f87" }] },
+    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3a3d3c" }] },
+    { featureType: "road.arterial", elementType: "geometry", stylers: [{ color: "#2c2f2e" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#123329" }] },
+    { featureType: "landscape", elementType: "geometry", stylers: [{ color: "#1c1f1e" }] },
+    { featureType: "park", elementType: "geometry", stylers: [{ color: "#16261d" }] }
+  ];
 
   let map;
   let markers = [];
@@ -116,107 +365,113 @@
   let activeCategory = "todas";
   let onlySunday = false;
 
-  // ---- INICIALIZAR MAPA ----
   function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
-      center: { lat: -34.6037, lng: -58.4206 }, // Centro de CABA (Obelisco)
+      center: { lat: -34.6037, lng: -58.4206 },
       zoom: 12,
+      styles: MAP_STYLE,
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: "greedy"
     });
     cargarLocales();
+    setupSheetDrag();
   }
 
-  // ---- CARGAR DATOS DE SUPABASE (con categorías relacionadas) ----
   async function cargarLocales() {
-    const status = document.getElementById("status");
-
-    // El join trae, por cada local, la lista de categorías vinculadas vía locales_categorias
+    const status = document.getElementById("status-pill");
     const { data, error } = await supabaseClient
       .from("locales")
-      .select(`
-        *,
-        locales_categorias (
-          categorias ( nombre )
-        )
-      `);
+      .select(`*, locales_categorias ( categorias ( nombre ) )`);
 
     if (error) {
-      status.textContent = "❌ Error cargando datos: " + error.message;
+      status.textContent = "❌ Error: " + error.message;
       console.error(error);
       return;
     }
 
-    // Aplanamos la estructura: cada local tiene un array simple de nombres de categoría
     allLocales = data.map(local => ({
       ...local,
       categorias: (local.locales_categorias || []).map(lc => lc.categorias.nombre)
     }));
 
-    status.textContent = `✅ ${allLocales.length} locales cargados`;
-    renderMarkers();
+    render();
   }
 
-  // ---- RENDERIZAR PINES SEGÚN FILTROS ----
-  function renderMarkers() {
-    markers.forEach(m => m.setMap(null));
-    markers = [];
-
-    const filtrados = allLocales.filter(local => {
+  function filtrar() {
+    return allLocales.filter(local => {
       const pasaCategoria = activeCategory === "todas" || local.categorias.includes(activeCategory);
       const pasaDomingo = !onlySunday || local.abre_domingo === true;
       return pasaCategoria && pasaDomingo;
     });
+  }
+
+  function render() {
+    const filtrados = filtrar();
+    renderMarkers(filtrados);
+    renderSheetList(filtrados);
+    document.getElementById("status-pill").textContent = `${filtrados.length} de ${allLocales.length} locales`;
+    document.getElementById("sheet-count").textContent = `(${filtrados.length})`;
+  }
+
+  function colorPrincipal(categorias) {
+    const principal = categorias && categorias.length > 0 ? categorias[0] : null;
+    return CATEGORY_COLORS[principal] || "#8A8F87";
+  }
+
+  function pinSvg(color) {
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34">
+        <circle cx="17" cy="17" r="10" fill="${color}" stroke="#171A1A" stroke-width="2.5"/>
+      </svg>`;
+    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+  }
+
+  function renderMarkers(filtrados) {
+    markers.forEach(m => m.setMap(null));
+    markers = [];
 
     filtrados.forEach(local => {
       if (!local.lat || !local.long) return;
 
+      const color = colorPrincipal(local.categorias);
       const marker = new google.maps.Marker({
         position: { lat: parseFloat(local.lat), lng: parseFloat(local.long) },
         map: map,
         title: local.nombre,
-        icon: iconoPorCategorias(local.categorias)
+        icon: {
+          url: pinSvg(color),
+          scaledSize: new google.maps.Size(34, 34),
+          anchor: new google.maps.Point(17, 17)
+        }
       });
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: armarInfoWindow(local)
-      });
-
-      marker.addListener("click", () => {
-        infoWindow.open(map, marker);
-      });
-
+      const infoWindow = new google.maps.InfoWindow({ content: armarInfoWindow(local) });
+      marker.addListener("click", () => infoWindow.open(map, marker));
+      marker._localId = local.id;
       markers.push(marker);
     });
-
-    document.getElementById("status").textContent = `Mostrando ${filtrados.length} de ${allLocales.length} locales`;
   }
 
-  function iconoPorCategorias(categorias) {
-    const colores = {
-      "Taller": "red",
-      "Bicicletería": "blue",
-      "Alquiler": "green",
-      "Indumentaria": "purple",
-      "Repuestos y accesorios": "orange"
-    };
-    // Si tiene varias categorías, usamos el color de la primera como color principal del pin
-    const principal = categorias && categorias.length > 0 ? categorias[0] : null;
-    const color = colores[principal] || "gray";
-    return `https://maps.google.com/mapfiles/ms/icons/${color}-dot.png`;
+  function tagsHtml(categorias) {
+    return (categorias || []).map(cat => {
+      const bg = CATEGORY_COLORS[cat] || "#8A8F87";
+      const fg = CATEGORY_TEXT[cat] || "#FFFFFF";
+      return `<span class="cat-tag" style="background:${bg};color:${fg};">${cat}</span>`;
+    }).join("");
   }
 
   function armarInfoWindow(local) {
-    const domingo = local.abre_domingo ? "✅ Abre domingos" : "❌ No abre domingos";
+    const domingo = local.abre_domingo
+      ? `<span class="badge-domingo si">✓ Abre domingos</span>`
+      : `<span class="badge-domingo no">✕ No abre domingos</span>`;
     const insta = local.instagram ? `<p><a href="https://instagram.com/${local.instagram.replace('@','')}" target="_blank">${local.instagram}</a></p>` : "";
-    const whatsapp = local.telefono_whatsapp ? `<p>📱 WhatsApp: <a href="https://wa.me/54${local.telefono_whatsapp}" target="_blank">${local.telefono_whatsapp}</a></p>` : "";
-    const fijo = local.telefono_fijo ? `<p>☎️ Tel. fijo: ${local.telefono_fijo}</p>` : "";
-
-    const tags = (local.categorias || [])
-      .map(cat => `<span class="tag">${cat}</span>`)
-      .join("");
+    const whatsapp = local.telefono_whatsapp ? `<p>📱 <a href="https://wa.me/54${local.telefono_whatsapp}" target="_blank">WhatsApp: ${local.telefono_whatsapp}</a></p>` : "";
+    const fijo = local.telefono_fijo ? `<p>☎️ ${local.telefono_fijo}</p>` : "";
 
     return `
-      <div class="info-window">
-        <div class="tags">${tags}</div>
+      <div class="iw">
+        <div class="cat-tags">${tagsHtml(local.categorias)}</div>
         <h3>${local.nombre}</h3>
         <p>📍 ${local.direccion || ""}</p>
         <p>🕒 ${local.horario || "Horario no disponible"}</p>
@@ -229,23 +484,112 @@
     `;
   }
 
-  // ---- EVENTOS DE FILTROS ----
-  document.querySelectorAll(".filter-btn").forEach(btn => {
+  function renderSheetList(filtrados) {
+    const list = document.getElementById("sheet-list");
+    list.innerHTML = "";
+
+    filtrados.forEach(local => {
+      const color = colorPrincipal(local.categorias);
+      const card = document.createElement("div");
+      card.className = "local-card";
+      card.innerHTML = `
+        <div class="marca" style="background:${color};"></div>
+        <div class="info">
+          <h3>${local.nombre}</h3>
+          <div class="cat-tags">${tagsHtml(local.categorias)}</div>
+          <div class="direccion">📍 ${local.direccion || ""}</div>
+          ${local.abre_domingo
+            ? '<span class="badge-domingo si">✓ Abre domingos</span>'
+            : '<span class="badge-domingo no">✕ No abre domingos</span>'}
+        </div>
+      `;
+      card.addEventListener("click", () => {
+        if (local.lat && local.long) {
+          map.panTo({ lat: parseFloat(local.lat), lng: parseFloat(local.long) });
+          map.setZoom(16);
+          const marker = markers.find(m => m._localId === local.id);
+          if (marker) google.maps.event.trigger(marker, "click");
+        }
+        collapseSheet();
+      });
+      list.appendChild(card);
+    });
+  }
+
+  // ---------- EVENTOS DE CHIPS ----------
+  document.querySelectorAll(".chip[data-cat]").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".chip[data-cat]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       activeCategory = btn.dataset.cat;
-      renderMarkers();
+      render();
     });
   });
 
-  document.getElementById("sundayCheck").addEventListener("change", (e) => {
-    onlySunday = e.target.checked;
-    renderMarkers();
+  document.getElementById("chip-domingo").addEventListener("click", (e) => {
+    onlySunday = !onlySunday;
+    e.currentTarget.classList.toggle("active", onlySunday);
+    render();
   });
+
+  // ---------- BOTTOM SHEET: drag + snap ----------
+  const sheet = document.getElementById("sheet");
+  const handleArea = document.getElementById("sheet-handle-area");
+
+  function expandSheet() { sheet.classList.add("expanded"); }
+  function collapseSheet() { sheet.classList.remove("expanded"); }
+
+  function setupSheetDrag() {
+    let startY = 0;
+    let startTranslate = 0;
+    let dragging = false;
+
+    function getCurrentTranslateY() {
+      const rect = sheet.getBoundingClientRect();
+      return rect.top;
+    }
+
+    handleArea.addEventListener("click", () => {
+      sheet.classList.toggle("expanded");
+    });
+
+    handleArea.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startTranslate = getCurrentTranslateY();
+      sheet.classList.add("dragging");
+      handleArea.setPointerCapture(e.pointerId);
+    });
+
+    handleArea.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      const deltaY = e.clientY - startY;
+      const containerHeight = sheet.parentElement.getBoundingClientRect().height;
+      const newTop = Math.max(containerHeight * 0.15, Math.min(containerHeight - 96, startTranslate + deltaY));
+      const translateFromBottom = containerHeight - newTop;
+      sheet.style.transform = `translateY(${containerHeight - translateFromBottom}px)`;
+      sheet.style.transform = `translateY(${newTop - (containerHeight - sheet.offsetHeight)}px)`;
+    });
+
+    handleArea.addEventListener("pointerup", (e) => {
+      if (!dragging) return;
+      dragging = false;
+      sheet.classList.remove("dragging");
+      sheet.style.transform = "";
+
+      const rect = sheet.getBoundingClientRect();
+      const containerRect = sheet.parentElement.getBoundingClientRect();
+      const visibleRatio = (containerRect.bottom - rect.top) / rect.height;
+
+      if (visibleRatio > 0.4) {
+        expandSheet();
+      } else {
+        collapseSheet();
+      }
+    });
+  }
 </script>
 
-<!-- SDK de Google Maps -->
 <script async
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyALr-xcC7FDaPrPuNlQiChxEQACiWi0fD8&callback=initMap">
 </script>
