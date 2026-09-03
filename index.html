@@ -416,6 +416,7 @@
   let allLocales = [];
   let activeCategory = "todas";
   let onlySunday = false;
+  let sharedInfoWindow = null; // una sola ventana de info compartida entre todos los pines
 
   function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
@@ -426,6 +427,7 @@
       zoomControl: true,
       gestureHandling: "greedy"
     });
+    sharedInfoWindow = new google.maps.InfoWindow();
     cargarLocales();
     setupSheetDrag();
 
@@ -511,8 +513,11 @@
         }
       });
 
-      const infoWindow = new google.maps.InfoWindow({ content: armarInfoWindow(local) });
-      marker.addListener("click", () => infoWindow.open(map, marker));
+      const infoWindow = sharedInfoWindow;
+      marker.addListener("click", () => {
+        infoWindow.setContent(armarInfoWindow(local));
+        infoWindow.open(map, marker);
+      });
       marker._localId = local.id;
       markers.push(marker);
     });
